@@ -95,6 +95,34 @@ export function ModernHeader({ onMenuToggle, isMenuOpen }: ModernHeaderProps) {
                     Home
                   </Button>
                 </Link>
+                
+                {isAuthenticated && (
+                  <>
+                    <Link href="/profile">
+                      <Button 
+                        variant={isActive('/profile') ? 'default' : 'ghost'} 
+                        size="sm" 
+                        className={isActive('/profile') ? '' : 'text-muted-foreground hover:text-foreground'}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
+                      </Button>
+                    </Link>
+                    
+                    {user?.roles.includes('admin') && (
+                      <Link href="/admin">
+                        <Button 
+                          variant={isActive('/admin') ? 'default' : 'ghost'} 
+                          size="sm" 
+                          className={isActive('/admin') ? '' : 'text-muted-foreground hover:text-foreground'}
+                        >
+                          <Shield className="h-4 w-4 mr-2" />
+                          Admin
+                        </Button>
+                      </Link>
+                    )}
+                  </>
+                )}
               </div>
             </nav>
 
@@ -174,6 +202,34 @@ export function ModernHeader({ onMenuToggle, isMenuOpen }: ModernHeaderProps) {
                   Home
                 </Button>
               </Link>
+              
+              {isAuthenticated && (
+                <>
+                  <Link href="/profile" onClick={closeMobileNav}>
+                    <Button 
+                      variant={isActive('/profile') ? 'default' : 'ghost'} 
+                      size="sm" 
+                      className="w-full justify-start"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Button>
+                  </Link>
+                  
+                  {user?.roles.includes('admin') && (
+                    <Link href="/admin" onClick={closeMobileNav}>
+                      <Button 
+                        variant={isActive('/admin') ? 'default' : 'ghost'} 
+                        size="sm" 
+                        className="w-full justify-start"
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin
+                      </Button>
+                    </Link>
+                  )}
+                </>
+              )}
             </nav>
           </div>
         </div>

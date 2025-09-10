@@ -1,5 +1,5 @@
 {
-  "name": "demo",
+  "name": "nextjs-microfrontend-template",
   "version": "0.1.0",
   "description": "Next.js microfrontend template with TypeScript, Tailwind CSS, shadcn/ui and Keycloak authentication",
   "private": true,
@@ -11,8 +11,8 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "docker:build": "docker build -t demo .",
-    "docker:run": "docker run -p 3000:3000 demo",
+    "docker:build": "docker build -t nextjs-microfrontend-template .",
+    "docker:run": "docker run -p 3000:3000 nextjs-microfrontend-template",
     "docker:compose": "docker-compose up --build",
     "docker:compose:down": "docker-compose down",
     "clean": "rm -rf .next out node_modules",

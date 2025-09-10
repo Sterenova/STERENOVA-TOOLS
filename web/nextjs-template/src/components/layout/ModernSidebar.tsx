@@ -33,6 +33,19 @@ export function ModernSidebar({ isOpen, onToggle }: ModernSidebarProps) {
       icon: Home,
       public: true,
     },
+    {
+      name: 'Profile',
+      href: '/profile',
+      icon: User,
+      public: false,
+    },
+    {
+      name: 'Admin',
+      href: '/admin',
+      icon: Shield,
+      public: false,
+      adminOnly: true,
+    },
   ];
 
   return (

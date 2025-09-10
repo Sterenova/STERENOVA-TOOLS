@@ -1,6 +1,6 @@
-# Next.js Template
+# Next.js Microfrontend Template
 
-A minimal, production-ready Next.js template with TypeScript, Tailwind CSS, shadcn/ui, and Keycloak authentication. This template focuses on providing a clean foundation with authentication and API services, without specific business logic.
+A modern, production-ready microfrontend template built with Next.js, TypeScript, Tailwind CSS, shadcn/ui, and Keycloak authentication.
 
 ## Features
 
@@ -13,7 +13,6 @@ A minimal, production-ready Next.js template with TypeScript, Tailwind CSS, shad
 - 🌙 **Dark/Light** theme support
 - 🔄 **React Query** for data fetching
 - 📊 **Modern UI** with sidebar navigation
-- 🔌 **API Service Layer** ready for backend integration
 
 ## Quick Start
 
@@ -47,8 +46,10 @@ A minimal, production-ready Next.js template with TypeScript, Tailwind CSS, shad
 ```
 src/
 ├── app/                    # Next.js App Router pages
+│   ├── admin/             # Admin page (requires admin role)
+│   ├── profile/           # User profile page
 │   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Home page (minimal template)
+│   └── page.tsx           # Home page
 ├── components/            # Reusable components
 │   ├── layout/            # Layout components
 │   │   ├── ModernHeader.tsx
@@ -62,8 +63,8 @@ src/
 ├── contexts/              # React contexts
 │   └── AuthContext.tsx
 ├── services/              # API services
-│   ├── api.ts            # Complete API client with interceptors
-│   └── keycloak.ts       # Keycloak integration
+│   ├── api.ts
+│   └── keycloak.ts
 └── lib/                   # Utility functions
     └── utils.ts
 ```
@@ -91,63 +92,23 @@ Make sure your Keycloak instance is configured with:
 
 ## API Integration
 
-The template includes a complete API service layer with:
+The template includes a pre-configured API client with:
 
 - **Axios** for HTTP requests
 - **Automatic** token injection
-- **Error** handling and token refresh
+- **Error** handling
 - **Request/Response** interceptors
-- **TypeScript** support
 
-### Available API Methods
-
+Example usage:
 ```typescript
 import { apiService } from '@/services/api';
 
-// Health check
-const health = await apiService.getHealth();
-
-// Service information
+// Get service information
 const serviceInfo = await apiService.getServiceInfo();
 
-// Protected endpoint
+// Get user data
 const userData = await apiService.getHello();
-
-// Admin endpoint
-const adminData = await apiService.getAdminData();
-
-// Generic API call
-const customData = await apiService.request({
-  method: 'POST',
-  url: '/custom-endpoint',
-  data: { key: 'value' }
-});
 ```
-
-## Template Philosophy
-
-This template is designed to be:
-
-- **Minimal**: No business-specific pages or logic
-- **Extensible**: Easy to add new pages and features
-- **Production-ready**: Includes all necessary tooling and configurations
-- **Well-documented**: Clear structure and examples
-
-### What's Included
-
-- ✅ Authentication system (login/logout)
-- ✅ API service layer
-- ✅ Modern UI components
-- ✅ Responsive layout
-- ✅ Theme support
-- ✅ TypeScript configuration
-- ✅ Development tooling
-
-### What's Not Included
-
-- ❌ Specific business pages (profile, admin, etc.)
-- ❌ Business logic
-- ❌ Custom components beyond the template
 
 ## Styling
 
