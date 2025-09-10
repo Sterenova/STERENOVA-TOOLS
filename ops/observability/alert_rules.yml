@@ -1,0 +1,62 @@
+groups:
+  - name: microservices-platform
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Service {{ $labels.service }} has error rate {{ $value }} errors/sec"
+
+      # High latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "Service {{ $labels.service }} has 95th percentile latency {{ $value }}s"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.job }} is down"
+
+      # Kong high error rate
+      - alert: KongHighErrorRate
+        expr: rate(kong_http_requests_total{code=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kong high error rate"
+          description: "Kong has error rate {{ $value }} errors/sec"
+
+      # Database connections high
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connections high"
+          description: "Database connections at {{ $value }}% of max"
+
+      # Redis memory usage high
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage at {{ $value }}% of max"

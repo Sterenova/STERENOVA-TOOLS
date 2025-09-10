@@ -1,0 +1,78 @@
+_format_version: "3.0"
+
+# Global plugins
+plugins:
+- name: cors
+  config:
+    origins: ["*"]
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    headers: ["Authorization", "Content-Type", "X-Requested-With"]
+    credentials: true
+    max_age: 3600
+    preflight_continue: false
+
+- name: prometheus
+  config:
+    per_consumer: true
+    status_code_metrics: true
+    latency_metrics: true
+    bandwidth_metrics: true
+    upstream_health_metrics: true
+
+# Services and Routes
+services:
+- name: svc-example
+  url: http://svc-example:7000
+  routes:
+  - name: svc-example-route
+    paths: ["/api/example"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 100
+      hour: 1000
+      policy: local
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 10
+
+- name: svc-python
+  url: http://svc-python:7000
+  routes:
+  - name: svc-python-route
+    paths: ["/api/python"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 100
+      hour: 1000
+      policy: local
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 10
+
+# Health check endpoint (no auth required)
+- name: kong-health
+  url: http://kong:8001
+  routes:
+  - name: kong-health-route
+    paths: ["/health"]
+    strip_path: true
+    methods: ["GET"]
+
+# Keycloak service (for token validation)
+- name: keycloak-service
+  url: http://keycloak:8080
+  routes:
+  - name: keycloak-routes
+    paths: ["/realms/platform"]
+    strip_path: false
+    methods: ["GET", "POST"]
+
+
+
+
