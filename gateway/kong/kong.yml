@@ -73,6 +73,24 @@ services:
     strip_path: false
     methods: ["GET", "POST"]
 
+# Configuration Service
+- name: config-service
+  url: http://config-service:3003
+  routes:
+  - name: config-service-route
+    paths: ["/api/config"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 200
+      hour: 2000
+      policy: local
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 10
+
 
 
 
