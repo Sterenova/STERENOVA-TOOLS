@@ -146,6 +146,26 @@ services:
       retries: 3
       start_period: 40s
 
+
+  # demo frontend
+  demo-web:
+    build:
+      context: ./web/demo
+      dockerfile: Dockerfile
+    container_name: demo-web
+    ports:
+      - "3470:3000"
+    depends_on:
+      - kong
+      - keycloak
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - microservices-network
+
 volumes:
   postgres_data:
   redis_data:
