@@ -85,19 +85,28 @@ services:
       retries: 3
       start_period: 40s
 
-  # Node.js Backend (NestJS)
-  backend-node:
+  # STERENOVA-FLUX-BACKEND
+  sterenova-flux-backend:
     build:
-      context: ./services/backend-node-template
+      context: ./services/sterenova-flux-backend
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "3002:3002"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - APP_PORT=3002
+      - APP_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=platform
+      - DB_PASSWORD=platform
+      - DB_DATABASE=platform
+      - JWT_SECRET=sterenova-flux-secret
+      - JWT_EXPIRES_IN=24h
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=platform
       - KEYCLOAK_CLIENT_ID=backend-service
+      - KEYCLOAK_CLIENT_SECRET=backend-secret
       - DATABASE_URL=postgresql://platform:platform@postgres:5432/platform
       - REDIS_URL=redis://redis:6379
     depends_on:
@@ -106,7 +115,47 @@ services:
       redis:
         condition: service_healthy
       keycloak:
-        condition: service_started   # <— n’attend plus un healthcheck
+        condition: service_started
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-STUDIO-BACKEND
+  sterenova-studio-backend:
+    build:
+      context: ./services/sterenova-studio-backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=platform
+      - DB_PASSWORD=platform
+      - DB_NAME=platform
+      - TYPEORM_SYNCHRONIZE=true
+      - DB_SSL=false
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=platform
+      - KEYCLOAK_CLIENT_ID=backend-service
+      - KEYCLOAK_CLIENT_SECRET=backend-secret
+      - DATABASE_URL=postgresql://platform:platform@postgres:5432/platform
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - microservices-network
     restart: unless-stopped
@@ -117,23 +166,23 @@ services:
       retries: 3
       start_period: 40s
       
-  # Next.js Frontend Template
-  frontend-nextjs:
+  # STERENOVA-FLUX-FRONTEND
+  sterenova-flux-frontend:
     build:
-      context: ./web/nextjs-template
+      context: ./web/sterenova-flux-frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3003:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
       - NEXT_PUBLIC_KEYCLOAK_REALM=platform
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=frontend-app
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/flux
+      - NEXT_PUBLIC_APP_URL=http://localhost:3003
     depends_on:
       keycloak:
-        condition: service_started   # <—
+        condition: service_started
       kong:
         condition: service_healthy
     networks:
@@ -146,7 +195,35 @@ services:
       retries: 3
       start_period: 40s
 
-
+  # STERENOVA-STUDIO-FRONTEND
+  sterenova-studio-frontend:
+    build:
+      context: ./web/sterenova-studio-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
+      - NEXT_PUBLIC_KEYCLOAK_REALM=platform
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=frontend-app
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/studio
+      - NEXT_PUBLIC_APP_URL=http://localhost:3001
+    depends_on:
+      keycloak:
+        condition: service_started
+      kong:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  
   # demo frontend
   demo-web:
     build:
@@ -165,7 +242,6 @@ services:
       retries: 5
     networks:
       - microservices-network
-
 volumes:
   postgres_data:
   redis_data:

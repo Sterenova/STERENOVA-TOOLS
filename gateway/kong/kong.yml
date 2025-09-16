@@ -21,11 +21,12 @@ plugins:
 
 # Services and Routes
 services:
-- name: svc-example
-  url: http://svc-example:7000
+# STERENOVA-FLUX-BACKEND
+- name: sterenova-flux-backend
+  url: http://sterenova-flux-backend:3002
   routes:
-  - name: svc-example-route
-    paths: ["/api/example"]
+  - name: flux-backend-route
+    paths: ["/api/flux"]
     strip_path: true
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   plugins:
@@ -38,11 +39,12 @@ services:
     config:
       allowed_payload_size: 10
 
-- name: svc-python
-  url: http://svc-python:7000
+# STERENOVA-STUDIO-BACKEND
+- name: sterenova-studio-backend
+  url: http://sterenova-studio-backend:3000
   routes:
-  - name: svc-python-route
-    paths: ["/api/python"]
+  - name: studio-backend-route
+    paths: ["/api/studio"]
     strip_path: true
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   plugins:
@@ -54,6 +56,50 @@ services:
   - name: request-size-limiting
     config:
       allowed_payload_size: 10
+
+# STERENOVA-FLUX-FRONTEND
+- name: sterenova-flux-frontend
+  url: http://sterenova-flux-frontend:3000
+  routes:
+  - name: flux-frontend-route
+    paths: ["/flux"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  - name: flux-assets-route
+    paths: ["/flux/_next", "/flux/logo.svg", "/flux/favicon.ico"]
+    strip_path: true
+    methods: ["GET", "OPTIONS"]
+  plugins:
+  - name: cors
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+      headers: ["Authorization", "Content-Type", "X-Requested-With"]
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+# STERENOVA-STUDIO-FRONTEND
+- name: sterenova-studio-frontend
+  url: http://sterenova-studio-frontend:3000
+  routes:
+  - name: studio-frontend-route
+    paths: ["/studio"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  - name: studio-assets-route
+    paths: ["/studio/_next", "/studio/logo.svg", "/studio/favicon.ico"]
+    strip_path: true
+    methods: ["GET", "OPTIONS"]
+  plugins:
+  - name: cors
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+      headers: ["Authorization", "Content-Type", "X-Requested-With"]
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
 
 # Health check endpoint (no auth required)
 - name: kong-health

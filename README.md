@@ -1,12 +1,13 @@
-# 🚀 Microservices Platform - Simple Setup
+# 🚀 Microservices Platform - Sterenova avec Keycloak
 
-Une plateforme microservices complète avec un seul Docker Compose pour tout démarrer !
+Une plateforme microservices complète avec authentification SSO Keycloak pour les applications Sterenova Flux et Sterenova Studio.
 
 ## 🎯 Services Inclus
 
-- **📱 Frontend Next.js** - Template moderne avec TypeScript et shadcn/ui
-- **🔧 Backend Node.js** - API NestJS avec authentification Keycloak
-- **🐍 Backend Python** - API FastAPI avec authentification Keycloak
+- **📊 Sterenova Flux Frontend** - Interface de gestion des devis et factures
+- **🎨 Sterenova Studio Frontend** - Interface de génération de templates SVG
+- **🔧 Sterenova Flux Backend** - API pour la gestion des devis et factures
+- **🔧 Sterenova Studio Backend** - API pour la génération de templates
 - **🔐 Keycloak** - Serveur d'authentification SSO (pré-configuré)
 - **🌐 Kong Gateway** - API Gateway avec rate limiting
 - **🗄️ PostgreSQL** - Base de données principale
@@ -15,22 +16,34 @@ Une plateforme microservices complète avec un seul Docker Compose pour tout dé
 ## 🚀 Démarrage Ultra Simple
 
 ```bash
+# Démarrer tous les services
+./start-sterenova.sh
+
+# Ou manuellement
 docker compose up -d
 ```
-
-C'est tout ! 🎉
 
 ## 📍 URLs des Services
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Interface utilisateur Next.js |
-| **Node.js API** | http://localhost:3001 | Backend NestJS |
-| **Python API** | http://localhost:3002 | Backend FastAPI |
-| **Keycloak** | http://localhost:8080 | Authentification (admin/admin) |
+| **Keycloak** | http://localhost:8080 | Authentification SSO (admin/admin) |
 | **Kong Gateway** | http://localhost:8000 | API Gateway |
+| **Sterenova Flux** | http://localhost:3003 | Interface Flux |
+| **Sterenova Studio** | http://localhost:3001 | Interface Studio |
+| **Flux Backend** | http://localhost:3002 | API Flux |
+| **Studio Backend** | http://localhost:3000 | API Studio |
 | **PostgreSQL** | localhost:5432 | Base de données |
 | **Redis** | localhost:6379 | Cache |
+
+## 🌐 URLs via Kong Gateway
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Sterenova Flux** | http://localhost:8000/flux | Interface Flux via Gateway |
+| **Sterenova Studio** | http://localhost:8000/studio | Interface Studio via Gateway |
+| **Flux API** | http://localhost:8000/api/flux | API Flux via Gateway |
+| **Studio API** | http://localhost:8000/api/studio | API Studio via Gateway |
 
 ## 🔧 Commandes Utiles
 

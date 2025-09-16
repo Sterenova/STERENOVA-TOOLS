@@ -20,11 +20,18 @@
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "http://localhost:3000/*",
-        "http://localhost:3470/*"
+        "http://localhost:3001/*",
+        "http://localhost:3003/*",
+        "http://localhost:3470/*",
+        "http://localhost:8000/flux/*",
+        "http://localhost:8000/studio/*"
       ],
       "webOrigins": [
         "http://localhost:3000",
-        "http://localhost:3470"
+        "http://localhost:3001",
+        "http://localhost:3003",
+        "http://localhost:3470",
+        "http://localhost:8000"
       ],
       "protocol": "openid-connect",
       "attributes": {
