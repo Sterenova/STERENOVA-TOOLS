@@ -36,9 +36,7 @@ services:
       retries: 5
 
   keycloak:
-    build:
-      context: ./sso/keycloak
-      dockerfile: Dockerfile
+    image: quay.io/keycloak/keycloak:24.0
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -49,15 +47,20 @@ services:
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
       KC_HTTP_ENABLED: true
-      KC_PROXY: edge 
+      KC_PROXY: edge
+      KC_SPI_TRUSTSTORE_FILE_HOSTNAME_VERIFICATION_POLICY: ANY
     ports:
       - "8080:8080"
+    volumes:
+      - ./sso/keycloak/sterenova-keycloakify-theme.jar:/opt/keycloak/providers/sterenova-keycloakify-theme.jar:ro
+      - ./sso/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - microservices-network
     restart: unless-stopped
+    command: start-dev --import-realm --http-enabled=true --proxy=edge --hostname-strict=false --hostname-strict-https=false
 
   # Kong API Gateway
   kong:
@@ -223,25 +226,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-  
-  # demo frontend
-  demo-web:
-    build:
-      context: ./web/demo
-      dockerfile: Dockerfile
-    container_name: demo-web
-    ports:
-      - "3470:3000"
-    depends_on:
-      - kong
-      - keycloak
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - microservices-network
 volumes:
   postgres_data:
   redis_data:
