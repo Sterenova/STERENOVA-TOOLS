@@ -57,6 +57,24 @@ services:
     config:
       allowed_payload_size: 10
 
+# STERENOVA-CLIENT-MANAGEMENT-BACKEND
+- name: sterenova-client-management
+  url: http://sterenova-client-management:3004
+  routes:
+  - name: client-management-route
+    paths: ["/api/clients"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 100
+      hour: 1000
+      policy: local
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 10
+
 # STERENOVA-FLUX-FRONTEND
 - name: sterenova-flux-frontend
   url: http://sterenova-flux-frontend:3000
