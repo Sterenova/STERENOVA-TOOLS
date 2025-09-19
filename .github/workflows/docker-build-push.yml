@@ -1,0 +1,124 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_PREFIX: sterenova
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: sterenova-flux-backend
+            context: ./services/sterenova-flux-backend
+            dockerfile: Dockerfile
+          - name: sterenova-flux-frontend
+            context: ./web/sterenova-flux-frontend
+            dockerfile: Dockerfile
+          - name: sterenova-studio-backend
+            context: ./services/sterenova-studio-backend
+            dockerfile: Dockerfile
+          - name: sterenova-studio-frontend
+            context: ./web/sterenova-studio-frontend
+            dockerfile: Dockerfile
+          - name: sterenova-client-management
+            context: ./services/sterenova-client-management
+            dockerfile: Dockerfile
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to DockerHub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service.name }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.service.context }}
+        file: ${{ matrix.service.context }}/${{ matrix.service.dockerfile }}
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Image digest
+      run: echo ${{ steps.build.outputs.digest }}
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    
+    strategy:
+      matrix:
+        service:
+          - sterenova-flux-backend
+          - sterenova-flux-frontend
+          - sterenova-studio-backend
+          - sterenova-studio-frontend
+          - sterenova-client-management
+
+    steps:
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build-and-push, security-scan]
+    if: always() && github.event_name != 'pull_request'
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+          echo "✅ Docker images built and pushed successfully!"
+          echo "Images pushed:"
+          echo "- sterenova/sterenova-flux-backend:latest"
+          echo "- sterenova/sterenova-flux-frontend:latest"
+          echo "- sterenova/sterenova-studio-backend:latest"
+          echo "- sterenova/sterenova-studio-frontend:latest"
+          echo "- sterenova/sterenova-client-management:latest"
+        else
+          echo "❌ Docker build failed!"
+        fi

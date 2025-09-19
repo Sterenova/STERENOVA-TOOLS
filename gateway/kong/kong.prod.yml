@@ -1,0 +1,160 @@
+_format_version: "3.0"
+
+# Global plugins for production
+plugins:
+- name: cors
+  config:
+    origins: ["https://flux.sterenova.fr", "https://studio.sterenova.fr"]
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    headers: ["Authorization", "Content-Type", "X-Requested-With"]
+    credentials: true
+    max_age: 3600
+    preflight_continue: false
+
+- name: prometheus
+  config:
+    per_consumer: true
+    status_code_metrics: true
+    latency_metrics: true
+    bandwidth_metrics: true
+    upstream_health_metrics: true
+
+- name: rate-limiting
+  config:
+    minute: 1000
+    hour: 10000
+    policy: redis
+    redis_host: redis
+    redis_port: 6379
+
+- name: request-size-limiting
+  config:
+    allowed_payload_size: 50
+
+- name: response-transformer
+  config:
+    add:
+      headers: ["X-Powered-By:Sterenova Platform"]
+
+# Services and Routes
+services:
+# STERENOVA-FLUX-BACKEND
+- name: sterenova-flux-backend
+  url: http://sterenova-flux-backend:3002
+  routes:
+  - name: flux-backend-route
+    hosts: ["api.flux.sterenova.fr"]
+    paths: ["/api/flux"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    protocols: ["https"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 200
+      hour: 2000
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+
+# STERENOVA-STUDIO-BACKEND
+- name: sterenova-studio-backend
+  url: http://sterenova-studio-backend:3000
+  routes:
+  - name: studio-backend-route
+    hosts: ["api.studio.sterenova.fr"]
+    paths: ["/api/studio"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    protocols: ["https"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 200
+      hour: 2000
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+
+# STERENOVA-CLIENT-MANAGEMENT-BACKEND
+- name: sterenova-client-management
+  url: http://sterenova-client-management:3004
+  routes:
+  - name: client-management-route
+    hosts: ["kong.sterenova.fr"]
+    paths: ["/api/clients"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    protocols: ["https"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 200
+      hour: 2000
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+
+# STERENOVA-FLUX-FRONTEND
+- name: sterenova-flux-frontend
+  url: http://sterenova-flux-frontend:3000
+  routes:
+  - name: flux-frontend-route
+    hosts: ["flux.sterenova.fr"]
+    paths: ["/"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    protocols: ["https"]
+  - name: flux-assets-route
+    hosts: ["flux.sterenova.fr"]
+    paths: ["/_next", "/logo.svg", "/favicon.ico"]
+    strip_path: true
+    methods: ["GET", "OPTIONS"]
+    protocols: ["https"]
+
+# STERENOVA-STUDIO-FRONTEND
+- name: sterenova-studio-frontend
+  url: http://sterenova-studio-frontend:3000
+  routes:
+  - name: studio-frontend-route
+    hosts: ["studio.sterenova.fr"]
+    paths: ["/"]
+    strip_path: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    protocols: ["https"]
+  - name: studio-assets-route
+    hosts: ["studio.sterenova.fr"]
+    paths: ["/_next", "/logo.svg", "/favicon.ico"]
+    strip_path: true
+    methods: ["GET", "OPTIONS"]
+    protocols: ["https"]
+
+# Keycloak service (for token validation)
+- name: keycloak-service
+  url: http://keycloak:8080
+  routes:
+  - name: keycloak-routes
+    hosts: ["keycloack.sterenova.fr"]
+    paths: ["/"]
+    strip_path: false
+    methods: ["GET", "POST"]
+    protocols: ["https"]
+  plugins:
+  - name: rate-limiting
+    config:
+      minute: 500
+      hour: 5000
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+
+# Health check endpoint (no auth required)
+- name: kong-health
+  url: http://kong:8001
+  routes:
+  - name: kong-health-route
+    hosts: ["kong.sterenova.fr"]
+    paths: ["/health"]
+    strip_path: true
+    methods: ["GET"]
+    protocols: ["https"]

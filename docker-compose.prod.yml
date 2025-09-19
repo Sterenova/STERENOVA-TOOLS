@@ -1,0 +1,270 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-platform}
+      POSTGRES_USER: ${POSTGRES_USER:-platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak SSO
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-platform}
+      KC_DB_USERNAME: ${POSTGRES_USER:-platform}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${SERVICE_FQDN_KEYCLOAK}
+      KC_HOSTNAME_STRICT: true
+      KC_HOSTNAME_STRICT_HTTPS: true
+      KC_HTTP_ENABLED: false
+      KC_PROXY: edge
+      KC_SPI_TRUSTSTORE_FILE_HOSTNAME_VERIFICATION_POLICY: ANY
+      KC_LOG_LEVEL: ${KEYCLOAK_LOG_LEVEL:-INFO}
+    volumes:
+      - ./sso/keycloak/sterenova-keycloakify-theme.jar:/opt/keycloak/providers/sterenova-keycloakify-theme.jar:ro
+      - ./sso/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    command: start --import-realm --proxy=edge --hostname-strict=true --hostname-strict-https=true
+
+  # Kong API Gateway
+  kong:
+    image: kong:3.0-alpine
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_HOSTNAME: ${SERVICE_FQDN_KONG}
+      KONG_HTTP_PORT: 80
+      KONG_HTTPS_PORT: 443
+      KONG_PROXY_LISTEN: 0.0.0.0:80, 0.0.0.0:443 ssl
+      KONG_SSL_CERT: /etc/ssl/certs/kong.crt
+      KONG_SSL_CERT_KEY: /etc/ssl/certs/kong.key
+    volumes:
+      - ./gateway/kong/kong.yml:/kong/kong.yml:ro
+      - ${SSL_CERT_PATH:-./ssl}:/etc/ssl/certs:ro
+    depends_on:
+      - sterenova-flux-backend
+      - sterenova-studio-backend
+      - sterenova-client-management
+      - sterenova-flux-frontend
+      - sterenova-studio-frontend
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-FLUX-BACKEND
+  sterenova-flux-backend:
+    image: sterenova/sterenova-flux-backend:latest
+    environment:
+      - NODE_ENV=production
+      - APP_PORT=3002
+      - APP_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER:-platform}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB:-platform}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      - KEYCLOAK_URL=${SERVICE_URL_KEYCLOAK}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-platform}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-backend-service}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - SERVICE_URL=${SERVICE_URL_STERENOVA_FLUX_BACKEND}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-STUDIO-BACKEND
+  sterenova-studio-backend:
+    image: sterenova/sterenova-studio-backend:latest
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-platform}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB:-platform}
+      - TYPEORM_SYNCHRONIZE=false
+      - DB_SSL=false
+      - KEYCLOAK_URL=${SERVICE_URL_KEYCLOAK}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-platform}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-backend-service}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - SERVICE_URL=${SERVICE_URL_STERENOVA_STUDIO_BACKEND}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-CLIENT-MANAGEMENT-BACKEND
+  sterenova-client-management:
+    image: sterenova/sterenova-client-management:latest
+    environment:
+      - NODE_ENV=production
+      - APP_PORT=3004
+      - APP_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER:-platform}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB:-platform}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      - KEYCLOAK_URL=${SERVICE_URL_KEYCLOAK}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-platform}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-client-management-service}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - SWAGGER_TITLE=Sterenova Client Management API
+      - SWAGGER_DESCRIPTION=API pour la gestion centralisée des clients
+      - SWAGGER_VERSION=1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-FLUX-FRONTEND
+  sterenova-flux-frontend:
+    image: sterenova/sterenova-flux-frontend:latest
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_KEYCLOAK_URL=${SERVICE_URL_KEYCLOAK}
+      - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM:-platform}
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-frontend-app}
+      - NEXT_PUBLIC_API_URL=${SERVICE_URL_KONG}/api/flux
+      - NEXT_PUBLIC_APP_URL=${SERVICE_URL_STERENOVA_FLUX_FRONTEND}
+    depends_on:
+      keycloak:
+        condition: service_started
+      kong:
+        condition: service_healthy
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # STERENOVA-STUDIO-FRONTEND
+  sterenova-studio-frontend:
+    image: sterenova/sterenova-studio-frontend:latest
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_KEYCLOAK_URL=${SERVICE_URL_KEYCLOAK}
+      - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM:-platform}
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-frontend-app}
+      - NEXT_PUBLIC_API_URL=${SERVICE_URL_KONG}/api/studio
+      - NEXT_PUBLIC_APP_URL=${SERVICE_URL_STERENOVA_STUDIO_FRONTEND}
+    depends_on:
+      keycloak:
+        condition: service_started
+      kong:
+        condition: service_healthy
+    networks:
+      - sterenova-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sterenova-network:
+    driver: bridge
