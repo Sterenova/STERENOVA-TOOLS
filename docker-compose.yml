@@ -168,6 +168,48 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # STERENOVA-CLIENT-MANAGEMENT-BACKEND
+  sterenova-client-management:
+    build:
+      context: ./services/sterenova-client-management
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - APP_PORT=3004
+      - APP_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=platform
+      - DB_PASSWORD=platform
+      - DB_DATABASE=client_management
+      - JWT_SECRET=sterenova-client-management-secret
+      - JWT_EXPIRES_IN=24h
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=platform
+      - KEYCLOAK_CLIENT_ID=client-management-service
+      - KEYCLOAK_CLIENT_SECRET=client-management-secret
+      - SWAGGER_TITLE=Sterenova Client Management API
+      - SWAGGER_DESCRIPTION=API pour la gestion centralisée des clients
+      - SWAGGER_VERSION=1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
       
   # STERENOVA-FLUX-FRONTEND
   sterenova-flux-frontend:
@@ -226,6 +268,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
 volumes:
   postgres_data:
   redis_data:
